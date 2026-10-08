@@ -248,23 +248,24 @@
     clearMsg();
 
     try {
-      // Step 1: Gumawa ng auth account
-      const { data: auth, error: authErr } = await sb.auth.signUp({ email, password: pass });
+      // Step 1: Gumawa ng auth account — i-pass ang role at barangay sa metadata
+      console.log('Registering with:', { email, name, role, barangay: role === 'farmer' ? brgy : null });
+      const { data: auth, error: authErr } = await sb.auth.signUp({
+        email,
+        password: pass,
+        options: {
+          data: {
+            name:     name,
+            role:     role,
+            barangay: role === 'farmer' ? brgy : null
+          }
+        }
+      });
+      console.log('Auth response:', auth, authErr);
       if (authErr) throw authErr;
       if (!auth.user) throw new Error('Hindi nagawa ang account. Subukan muli.');
 
-      // Step 2: I-save ang profile
-      const { error: profErr } = await sb.from('users').insert({
-        id:         auth.user.id,
-        name:       name,
-        email:      email,
-        role:       role,
-        barangay:   role === 'farmer' ? brgy : null,
-        active:     true,
-        created_at: new Date().toISOString()
-      });
-      if (profErr) throw profErr;
-
+      // Profile auto-created via database trigger
       showMsg('success', '✓ Na-register! Nire-redirect...');
       setTimeout(() => go(role), 1000);
 
@@ -304,7 +305,7 @@
     if (err.includes('invalid_credentials') || err.includes('Invalid login')) return 'Mali ang email o password.';
     if (err.includes('already registered') || err.includes('already been registered')) return 'Ginagamit na ang email. Mag-login na lang.';
     if (err.includes('weak') || err.includes('Password')) return 'Masyadong mahina ang password.';
-    if (err.includes('valid email') || err.includes('email')) return 'Hindi valid ang email address.';
+    if (err.includes('valid email') || err.includes('email')) return 'Hindi valid ang email address: ' + err;
     if (err.includes('duplicate') || err.includes('unique')) return 'Ginagamit na ang email na ito.';
     return err;
   }
