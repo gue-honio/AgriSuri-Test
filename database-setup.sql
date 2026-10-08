@@ -130,6 +130,30 @@ CREATE POLICY "Admin can manage alerts"
     )
   );
 
+-- ── TRIGGER: Auto-create profile on signup ──────────────────────
+-- Gumagawa ng user profile automatically kapag nag-signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.users (id, name, email, role, barangay, active, created_at)
+  VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'name', ''),
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'role', 'farmer'),
+    COALESCE(NEW.raw_user_meta_data->>'barangay', NULL),
+    true,
+    NOW()
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
 -- ── INDEXES ───────────────────────────────────────────────────
 -- Para mas mabilis ang queries
 
