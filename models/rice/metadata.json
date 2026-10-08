@@ -1,0 +1,1 @@
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.17","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2026-10-07T13:23:43.175Z","userMetadata":{},"modelName":"tm-my-image-model","labels":["Healthy_Rice","Bacterial_Leaf_Blight","Brown_Spot","Leaf_Blast","Leaf_Scald","Invalid_Or_Background"],"imageSize":224}
