@@ -475,11 +475,6 @@ function updateDetBtn() {
   btn.disabled = !imgReady; btn.style.opacity = imgReady ? '1' : '0.45';
 }
 
-// ── ROBOFLOW CONFIG ──────────────────────────────────────────
-const RF_API_KEY  = 'J9uM5hNHsDX6bmTbwsoh';
-const RF_MODEL_ID = 'rice-leaf-disease-twtlz/1';
-const RF_API_URL  = `https://classify.roboflow.com/${RF_MODEL_ID}`;
-
 // ── DETECTION ─────────────────────────────────────────────────
 async function runDetect() {
   const src = camOn ? document.getElementById('video') : document.getElementById('img');
@@ -495,127 +490,21 @@ async function runDetect() {
   setStatus(lang==='fil' ? 'Sinusuri ang dahon...' : 'Analyzing leaf...');
 
   try {
-    // I-convert ang image sa base64 para sa Roboflow API
-    const base64 = await getBase64(src);
-
-    // I-call ang Roboflow Classification API
-    const response = await fetch(`${RF_API_URL}?api_key=${RF_API_KEY}`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    base64.split(',')[1]
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error('Roboflow API error: ' + response.status + ' ' + errText);
-    }
-    const rfResult = await response.json();
-    console.log('Roboflow result:', rfResult);
-
-    // I-convert ang Roboflow result sa format na kaya ng showResult()
-    const preds = convertRoboflowResult(rfResult);
+    // Use Teachable Machine model for detection (works online & offline)
+    if (!model) throw new Error('Model not loaded');
+    const preds = await model.predict(src);
     showResult(preds, src);
 
   } catch(e) {
-    // Fallback sa Teachable Machine kung may error sa Roboflow
-    console.warn('Roboflow failed, trying Teachable Machine...', e);
-    if (model) {
-      try {
-        const preds = await model.predict(src);
-        showResult(preds, src);
-      } catch(e2) {
-        setStatus(lang==='fil' ? 'May error. Subukan muli.' : 'Error. Try again.');
-      }
-    } else {
-      setStatus(lang==='fil' ? 'May error. Tiyaking may internet.' : 'Error. Check internet connection.');
-    }
+    // Fallback kung wala pang loaded o may error
+    console.warn('Teachable Machine error, subukan muli.', e);
+    setStatus(lang==='fil' ? 'May error. Subukan muli.' : 'Error. Try again.');
   } finally {
     document.getElementById('det-txt').style.display  = 'inline';
     document.getElementById('det-spin').style.display = 'none';
     document.getElementById('det-btn').disabled = false;
     updateDetBtn();
   }
-}
-
-// ── GET BASE64 ────────────────────────────────────────────────
-// I-convert ang video frame o uploaded image sa base64 string
-// Para mai-send sa Roboflow API
-function getBase64(src) {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    canvas.width  = 640;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(src, 0, 0, 640, 480);
-    resolve(canvas.toDataURL('image/jpeg', 0.9));
-  });
-}
-
-// ── CONVERT ROBOFLOW RESULT ───────────────────────────────────
-// Roboflow classification API returns:
-// { predicted_classes: [...], predictions: { className: { confidence } } }
-function convertRoboflowResult(rfResult) {
-
-  // Class name mapping — Roboflow → Our disease names
-  const classMap = {
-    'Blast':                   'Rice Blast',
-    'blast':                   'Rice Blast',
-    'Rice Blast':              'Rice Blast',
-    'rice_blast':              'Rice Blast',
-    'Bacterial Blight':        'Bacterial Leaf Blight',
-    'bacterial_blight':        'Bacterial Leaf Blight',
-    'Bacterial_Blight':        'Bacterial Leaf Blight',
-    'Brown Spot':              'Brown Spot',
-    'brown_spot':              'Brown Spot',
-    'BrownSpot':               'Brown Spot',
-    'Healthy':                 lastCrop === 'rice' ? 'Healthy Rice' : 'Healthy Tomato',
-    'healthy':                 lastCrop === 'rice' ? 'Healthy Rice' : 'Healthy Tomato',
-    'Early Blight':            'Early Blight',
-    'early_blight':            'Early Blight',
-    'Late Blight':             'Late Blight',
-    'late_blight':             'Late Blight',
-    'Leaf Mold':               'Leaf Mold',
-    'leaf_mold':               'Leaf Mold'
-  };
-
-  // Handle classification API response format
-  // { predictions: { "ClassName": { "confidence": 0.95 }, ... } }
-  if (rfResult.predictions && typeof rfResult.predictions === 'object' && !Array.isArray(rfResult.predictions)) {
-    const entries = Object.entries(rfResult.predictions)
-      .map(([cls, data]) => ({
-        className: classMap[cls] || cls,
-        probability: typeof data === 'object' ? data.confidence : data
-      }))
-      .sort((a, b) => b.probability - a.probability);
-
-    if (entries.length > 0) return entries;
-  }
-
-  // Handle detection API response format
-  // { predictions: [{ class, confidence }] }
-  if (Array.isArray(rfResult.predictions) && rfResult.predictions.length > 0) {
-    const sorted = rfResult.predictions.sort((a, b) => b.confidence - a.confidence);
-    const top = sorted[0];
-    const mappedClass = classMap[top.class] || classMap[top.class?.toLowerCase()] || top.class;
-    const remaining = 1 - top.confidence;
-    const others = lastCrop === 'rice'
-      ? ['Rice Blast', 'Brown Spot', 'Bacterial Leaf Blight', 'Healthy Rice']
-      : ['Early Blight', 'Late Blight', 'Leaf Mold', 'Healthy Tomato'];
-    const result = [{ className: mappedClass, probability: top.confidence }];
-    others.filter(c => c !== mappedClass).forEach((c, i) => {
-      result.push({ className: c, probability: remaining * [0.5, 0.3, 0.2][i] || 0.01 });
-    });
-    return result;
-  }
-
-  // Kung walang detection — healthy
-  console.warn('No predictions from Roboflow, defaulting to healthy');
-  return [
-    { className: lastCrop === 'rice' ? 'Healthy Rice' : 'Healthy Tomato', probability: 0.90 },
-    { className: 'Rice Blast',   probability: 0.05 },
-    { className: 'Brown Spot',   probability: 0.03 },
-    { className: 'Bacterial Leaf Blight', probability: 0.02 }
-  ];
 }
 
 // ── SHOW RESULT ───────────────────────────────────────────────
@@ -950,6 +839,7 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.warn('[App] Service Worker failed:', err));
   });
 }
+
 </script>
 </body>
 </html>
