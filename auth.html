@@ -215,18 +215,29 @@
     loading('login', true);
     clearMsg();
 
-    try {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
+try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
 
-      const { data: profile } = await sb.from('users').select('role').eq('id', data.user.id).single();
-      showMsg('success', 'Naka-login na! Sandali...');
-      setTimeout(() => go(profile?.role || 'farmer'), 800);
+    // Ensure profile role is correct (fix accounts created before this fix)
+    const { data: profile, error: profileErr } = await sb.from('users').select('role').eq('id', data.user.id).single();
+    if (profileErr) throw profileErr;
 
-    } catch(e) {
-      loading('login', false);
-      showMsg('error', friendly(e.message));
+    // If role is wrong or missing, update it
+    if (!profile || !['admin', 'da_officer', 'farmer'].includes(profile?.role)) {
+      await sb.from('users').upsert({
+        id: data.user.id,
+        role: 'farmer',  // default; will be corrected on next registration
+        name: data.user.user_metadata?.name || null
+      });
     }
+
+    showMsg('success', 'Naka-login na! Sandali...');
+    setTimeout(() => go(profile?.role || 'farmer'), 800);
+
+  } catch(e) {
+    loading('login', false);
+    showMsg('error', friendly(e.message));
   }
 
   // ── REGISTER ────────────────────────────────────────────────
@@ -264,6 +275,17 @@
       console.log('Auth response:', auth, authErr);
       if (authErr) throw authErr;
       if (!auth.user) throw new Error('Hindi nagawa ang account. Subukan muli.');
+
+      // Explicitly create user profile with correct role (bypass trigger reliance)
+      const { error: profileErr } = await sb.from('users').insert({
+        id: auth.user.id,
+        name: name,
+        email: email,
+        role: role,
+        barangay: role === 'farmer' ? brgy : null,
+        active: true
+      });
+      if (profileErr) console.error('Profile insert error:', profileErr);
 
       // Profile auto-created via database trigger
       showMsg('success', '✓ Na-register! Nire-redirect...');
@@ -309,6 +331,7 @@
     if (err.includes('duplicate') || err.includes('unique')) return 'Ginagamit na ang email na ito.';
     return err;
   }
+}
 </script>
 </body>
 </html>
