@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriSense PH — Login</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f5f0; min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .logo-wrap { text-align: center; margin-bottom: 24px; }
+    .logo {
+      width: 80px; height: 80px; background: #1e5c1e;
+      border-radius: 22px; display: flex; align-items: center;
+      justify-content: center; font-size: 40px; margin: 0 auto 14px;
+      box-shadow: 0 4px 16px rgba(30,92,30,0.3);
+    }
+    .app-name { font-size: 24px; font-weight: 800; color: #1a3d1a; }
+    .app-sub  { font-size: 13px; color: #5a7a5a; margin-top: 4px; }
+    .card {
+      background: #fff; border-radius: 22px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 26px 22px; width: 100%; max-width: 390px;
+    }
+    .tabs { display: flex; background: #f0f5f0; border-radius: 14px; padding: 4px; margin-bottom: 22px; }
+    .tab {
+      flex: 1; padding: 10px; border: none; background: transparent;
+      border-radius: 11px; font-size: 14px; font-weight: 600;
+      cursor: pointer; color: #5a7a5a; transition: all 0.15s;
+    }
+    .tab.active { background: #fff; color: #1a3d1a; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .msg {
+      border-radius: 12px; padding: 10px 14px;
+      font-size: 13px; line-height: 1.5; margin-bottom: 16px; display: none;
+    }
+    .msg.error   { background: #fff0f0; color: #8a1010; border: 1px solid #ffb0b0; }
+    .msg.success { background: #eaf5ea; color: #1a5a1a; border: 1px solid #a8d4a8; }
+    .label {
+      display: block; font-size: 11px; font-weight: 700; color: #3a6a3a;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px;
+    }
+    .input {
+      width: 100%; padding: 13px 14px; border: 1.5px solid #d4e8d4;
+      border-radius: 12px; font-size: 14px; color: #1a3a1a;
+      background: #fff; outline: none; margin-bottom: 14px;
+      transition: border-color 0.15s;
+    }
+    .input:focus { border-color: #1e5c1e; }
+    .role-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+    .role-btn {
+      border: 2px solid #d4e8d4; border-radius: 14px;
+      padding: 12px 6px; text-align: center; cursor: pointer;
+      background: #f8fcf8; transition: all 0.15s;
+    }
+    .role-btn.active { border-color: #1e5c1e; background: #eaf5ea; }
+    .role-icon { font-size: 24px; display: block; margin-bottom: 4px; }
+    .role-name { font-size: 11px; font-weight: 700; color: #1a3a1a; }
+    .role-desc { font-size: 9px; color: #7a9a7a; margin-top: 1px; }
+    .role-btn.active .role-name { color: #1e5c1e; }
+    .btn {
+      width: 100%; padding: 14px; background: #1e5c1e; color: #fff;
+      border: none; border-radius: 14px; font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active   { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .spinner {
+      width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.65s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .footer { text-align: center; font-size: 12px; color: #9aaa9a; margin-top: 20px; }
+    #code-group, #barangay-group { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="logo-wrap">
+  <div class="logo">🌿</div>
+  <div class="app-name">AgriSense PH</div>
+  <div class="app-sub">Smart Crop Disease Detection · Central Luzon</div>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    <button class="tab active" id="tab-login" onclick="showTab('login')">Mag-login</button>
+    <button class="tab" id="tab-reg"   onclick="showTab('reg')">Mag-register</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <!-- LOGIN -->
+  <div id="form-login">
+    <label class="label">Email</label>
+    <input class="input" type="email" id="l-email" placeholder="iyong@email.com">
+    <label class="label">Password</label>
+    <input class="input" type="password" id="l-pass" placeholder="••••••••">
+    <button class="btn" id="btn-login" onclick="doLogin()">
+      <span id="lt">Mag-login</span>
+      <div class="spinner" id="ls"></div>
+    </button>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="form-reg" style="display:none">
+    <label class="label">Piliin ang Role</label>
+    <div class="role-grid">
+      <div class="role-btn active" id="r-farmer" onclick="setRole('farmer')">
+        <span class="role-icon">👨‍🌾</span>
+        <div class="role-name">Farmer</div>
+        <div class="role-desc">Mag-detect</div>
+      </div>
+      <div class="role-btn" id="r-admin" onclick="setRole('admin')">
+        <span class="role-icon">👨‍💼</span>
+        <div class="role-name">Admin</div>
+        <div class="role-desc">Dashboard</div>
+      </div>
+      <div class="role-btn" id="r-da_officer" onclick="setRole('da_officer')">
+        <span class="role-icon">🏛️</span>
+        <div class="role-name">DA Officer</div>
+        <div class="role-desc">Government</div>
+      </div>
+    </div>
+
+    <div id="code-group">
+      <label class="label">Access Code</label>
+      <input class="input" type="text" id="r-code" placeholder="I-type ang access code">
+      <div style="font-size:11px;color:#7a9a7a;margin-top:4px;background:#f0f5f0;border-radius:8px;padding:6px 10px">
+        👨‍💼 Admin code: <strong>AGRI-ADMIN-2025</strong><br>
+        🏛️ DA Officer code: <strong>DA-OFFICER-2025</strong>
+      </div>
+    </div>
+
+    <label class="label">Buong Pangalan</label>
+    <input class="input" type="text" id="r-name" placeholder="Juan dela Cruz">
+
+    <label class="label">Email</label>
+    <input class="input" type="email" id="r-email" placeholder="iyong@email.com">
+
+    <div id="barangay-group">
+      <label class="label">Barangay / Lungsod</label>
+      <input class="input" type="text" id="r-brgy" placeholder="Brgy. Lidong, Cabanatuan City">
+    </div>
+
+    <label class="label">Password</label>
+    <input class="input" type="password" id="r-pass" placeholder="Minimum 6 characters">
+
+    <button class="btn" id="btn-reg" onclick="doRegister()">
+      <span id="rt">Mag-register</span>
+      <div class="spinner" id="rs"></div>
+    </button>
+  </div>
+</div>
+
+<div class="footer">AgriSense PH v2.0 · Para sa mga magsasaka ng Central Luzon</div>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ── SUPABASE SETUP ──────────────────────────────────────────
+  const sb = window.supabase.createClient(
+    'https://unwzvscuxsdnesqieahc.supabase.co',
+    'sb_publishable_lvUkeeahwkVKhNSKE1FvAQ_nVWf9g13'
+  );
+
+  // Access codes para sa admin at DA officer
+  const CODES = {
+    admin:      'AGRI-ADMIN-2025',
+    da_officer: 'DA-OFFICER-2025'
+  };
+
+  let role = 'farmer';
+
+  // ── CHECK IF ALREADY LOGGED IN ──────────────────────────────
+  // Kapag may session na — i-redirect agad
+  sb.auth.getSession().then(async ({ data: { session } }) => {
+    if (!session) return;
+    try {
+      const { data } = await sb.from('users').select('role').eq('id', session.user.id).single();
+      if (data) go(data.role);
+    } catch(e) { /* hindi pa naka-register ang profile */ }
+  });
+
+  // ── TAB SWITCHING ───────────────────────────────────────────
+  function showTab(t) {
+    document.getElementById('form-login').style.display = t==='login' ? 'block' : 'none';
+    document.getElementById('form-reg').style.display   = t==='reg'   ? 'block' : 'none';
+    document.getElementById('tab-login').className = 'tab' + (t==='login' ? ' active' : '');
+    document.getElementById('tab-reg').className   = 'tab' + (t==='reg'   ? ' active' : '');
+    clearMsg();
+  }
+
+  // ── ROLE SELECTION ──────────────────────────────────────────
+  function setRole(r) {
+    role = r;
+    ['farmer','admin','da_officer'].forEach(x =>
+      document.getElementById(`r-${x}`).className = 'role-btn' + (x===r ? ' active' : '')
+    );
+    document.getElementById('barangay-group').style.display = r==='farmer' ? 'block' : 'none';
+    document.getElementById('code-group').style.display     = r!=='farmer' ? 'block' : 'none';
+  }
+
+  // ── LOGIN ───────────────────────────────────────────────────
+  async function doLogin() {
+    const email = document.getElementById('l-email').value.trim();
+    const pass  = document.getElementById('l-pass').value;
+    if (!email || !pass) { showMsg('error','Punan ang email at password.'); return; }
+
+    loading('login', true);
+    clearMsg();
+
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
+
+      const { data: profile } = await sb.from('users').select('role').eq('id', data.user.id).single();
+      showMsg('success', 'Naka-login na! Sandali...');
+      setTimeout(() => go(profile?.role || 'farmer'), 800);
+
+    } catch(e) {
+      loading('login', false);
+      showMsg('error', friendly(e.message));
+    }
+  }
+
+  // ── REGISTER ────────────────────────────────────────────────
+  async function doRegister() {
+    const name  = document.getElementById('r-name').value.trim();
+    const email = document.getElementById('r-email').value.trim();
+    const pass  = document.getElementById('r-pass').value;
+    const brgy  = document.getElementById('r-brgy').value.trim();
+    const code  = document.getElementById('r-code').value.trim();
+
+    // Validation
+    if (!name)  { showMsg('error','Ilagay ang iyong pangalan.'); return; }
+    if (!email) { showMsg('error','Ilagay ang iyong email.'); return; }
+    if (!pass || pass.length < 6) { showMsg('error','Password — minimum 6 characters.'); return; }
+    if (role === 'farmer' && !brgy) { showMsg('error','Ilagay ang iyong barangay.'); return; }
+    if (role !== 'farmer' && code !== CODES[role]) { showMsg('error','Mali ang access code.'); return; }
+
+    loading('reg', true);
+    clearMsg();
+
+    try {
+      // Step 1: Gumawa ng auth account
+      const { data: auth, error: authErr } = await sb.auth.signUp({ email, password: pass });
+      if (authErr) throw authErr;
+      if (!auth.user) throw new Error('Hindi nagawa ang account. Subukan muli.');
+
+      // Step 2: I-save ang profile
+      const { error: profErr } = await sb.from('users').insert({
+        id:         auth.user.id,
+        name:       name,
+        email:      email,
+        role:       role,
+        barangay:   role === 'farmer' ? brgy : null,
+        active:     true,
+        created_at: new Date().toISOString()
+      });
+      if (profErr) throw profErr;
+
+      showMsg('success', '✓ Na-register! Nire-redirect...');
+      setTimeout(() => go(role), 1000);
+
+    } catch(e) {
+      loading('reg', false);
+      showMsg('error', friendly(e.message));
+    }
+  }
+
+  // ── HELPERS ─────────────────────────────────────────────────
+  function go(r) {
+    const map = { farmer:'index.html', admin:'admin.html', da_officer:'da-dashboard.html' };
+    window.location.href = map[r] || 'index.html';
+  }
+
+  function loading(type, on) {
+    const prefix = type === 'login' ? 'l' : 'r';
+    const btnId  = type === 'login' ? 'btn-login' : 'btn-reg';
+    document.getElementById(btnId).disabled             = on;
+    document.getElementById(`${prefix}t`).style.display = on ? 'none'         : 'inline';
+    document.getElementById(`${prefix}s`).style.display = on ? 'inline-block' : 'none';
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('msg');
+    el.className = 'msg ' + type;
+    el.textContent = text;
+    el.style.display = 'block';
+  }
+
+  function clearMsg() {
+    document.getElementById('msg').style.display = 'none';
+  }
+
+  function friendly(err) {
+    if (!err) return 'May error. Subukan muli.';
+    if (err.includes('invalid_credentials') || err.includes('Invalid login')) return 'Mali ang email o password.';
+    if (err.includes('already registered') || err.includes('already been registered')) return 'Ginagamit na ang email. Mag-login na lang.';
+    if (err.includes('weak') || err.includes('Password')) return 'Masyadong mahina ang password.';
+    if (err.includes('valid email') || err.includes('email')) return 'Hindi valid ang email address.';
+    if (err.includes('duplicate') || err.includes('unique')) return 'Ginagamit na ang email na ito.';
+    return err;
+  }
+</script>
+</body>
+</html>

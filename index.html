@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>AgriSense PH</title>
+  <meta name="theme-color" content="#1e5c1e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f5f0; height: 100dvh;
+      display: flex; flex-direction: column;
+      overflow: hidden; max-width: 480px; margin: 0 auto;
+    }
+
+    /* HEADER */
+    .header {
+      background: #1e5c1e; padding: 11px 16px 10px;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .h-logo { width: 34px; height: 34px; background: rgba(255,255,255,0.15); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .h-name { color: #fff; font-size: 15px; font-weight: 700; }
+    .h-sub  { color: #a8d4a8; font-size: 10px; }
+    .lang-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 5px 12px; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .logout-btn { background: rgba(255,255,255,0.12); border: none; color: #a8d4a8; font-size: 11px; cursor: pointer; padding: 4px 10px; border-radius: 20px; }
+
+    /* SCROLL AREA */
+    .scroll { flex: 1; overflow-y: auto; padding: 12px 12px 80px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .scroll::-webkit-scrollbar { display: none; }
+
+    /* WEATHER CARD */
+    .weather-card {
+      background: linear-gradient(135deg, #1e5c1e, #2d7a2d);
+      border-radius: 18px; padding: 14px; margin-bottom: 14px; color: #fff;
+    }
+    .w-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .w-loc  { font-size: 11px; color: #a8d4a8; margin-bottom: 4px; }
+    .w-temp { font-size: 40px; font-weight: 800; line-height: 1; }
+    .w-icon { font-size: 44px; line-height: 1; }
+    .w-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 10px; }
+    .w-stat { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 7px; text-align: center; }
+    .w-stat-i { font-size: 14px; display: block; }
+    .w-stat-v { font-size: 13px; font-weight: 700; display: block; }
+    .w-stat-l { font-size: 9px; color: #a8d4a8; display: block; }
+    .risk-banner { border-radius: 10px; padding: 8px 12px; display: flex; align-items: flex-start; gap: 8px; }
+    .risk-banner.low    { background: rgba(255,255,255,0.12); }
+    .risk-banner.medium { background: rgba(255,200,0,0.2); }
+    .risk-banner.high   { background: rgba(255,80,80,0.22); }
+    .risk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+    .risk-dot.low    { background: #7aff7a; }
+    .risk-dot.medium { background: #ffd040; }
+    .risk-dot.high   { background: #ff6060; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+    .risk-title { font-size: 12px; font-weight: 700; color: #fff; }
+    .risk-msg   { font-size: 11px; color: #d0e8d0; margin-top: 2px; }
+    .w-loading { text-align: center; padding: 14px; color: #a8d4a8; font-size: 13px; }
+    .w-err     { text-align: center; padding: 10px; color: #ffaaaa; font-size: 12px; }
+    .w-refresh { background: transparent; border: none; color: #a8d4a8; font-size: 11px; cursor: pointer; margin-top: 6px; float: right; }
+
+    /* SECTION LABEL */
+    .sec { font-size: 11px; font-weight: 700; color: #3a6a3a; letter-spacing: 0.06em; text-transform: uppercase; margin: 4px 0 8px; display: flex; align-items: center; gap: 6px; }
+    .sec::after { content: ''; flex: 1; height: 1px; background: #d4e8d4; }
+
+    /* CROP SELECTOR */
+    .crop-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .crop-btn { flex: 1; background: #fff; border-radius: 14px; padding: 12px 8px; text-align: center; border: 2px solid #d4e8d4; cursor: pointer; transition: all 0.15s; }
+    .crop-btn:active { transform: scale(0.96); }
+    .crop-btn.active { border-color: #1e5c1e; background: #eaf5ea; box-shadow: 0 2px 10px rgba(30,92,30,0.15); }
+    .crop-emoji { font-size: 26px; display: block; margin-bottom: 4px; }
+    .crop-name  { font-size: 13px; font-weight: 700; color: #1a3a1a; }
+    .crop-sub   { font-size: 10px; color: #7a9a7a; }
+    .crop-btn.active .crop-name { color: #1e5c1e; }
+
+    /* PREVIEW */
+    .preview { background: #d8ecd8; border-radius: 14px; aspect-ratio: 4/3; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+    #video { width: 100%; height: 100%; object-fit: cover; display: none; }
+    #img   { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .ph { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #4a7a4a; }
+    .ph svg { width: 40px; height: 40px; stroke: #4a8a4a; fill: none; stroke-width: 1.5; }
+    .ph p   { font-size: 12px; text-align: center; padding: 0 16px; }
+
+    /* BUTTONS */
+    .action-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .ab { flex: 1; border-radius: 12px; padding: 11px 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; border: none; transition: all 0.12s; }
+    .ab:active { transform: scale(0.96); opacity: 0.85; }
+    .cam-btn { background: #1e5c1e; color: #fff; }
+    .upl-btn { background: #eaf5ea; color: #1e5c1e; border: 1.5px solid #a8d0a8 !important; }
+    .detect-btn {
+      width: 100%; padding: 14px; border-radius: 14px;
+      background: #145214; color: #fff; font-size: 15px; font-weight: 700;
+      border: none; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 8px; margin-bottom: 4px;
+      transition: all 0.12s;
+    }
+    .detect-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .speak-btn {
+      display: none; width: 100%; padding: 10px; border-radius: 12px;
+      background: #f0f7f0; color: #1a5a1a; font-size: 13px; font-weight: 600;
+      border: 1.5px solid #b0d0b0; cursor: pointer; margin-top: 8px;
+    }
+    .spinner { display: none; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.65s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* STATUS */
+    #status { font-size: 12px; color: #5a7a5a; text-align: center; padding: 4px 0 8px; min-height: 18px; }
+
+    /* TOAST - Not a leaf */
+    .toast { background: #fff8f0; border: 1.5px solid #c08000; border-radius: 14px; padding: 14px; margin-top: 10px; display: none; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .toast-title { font-size: 13px; font-weight: 700; color: #7a3d00; margin-bottom: 5px; }
+    .toast-msg   { font-size: 12px; color: #5a3000; line-height: 1.6; margin-bottom: 8px; }
+    .toast-tips  { background: #f0fbf0; border-radius: 8px; padding: 8px 10px; font-size: 12px; color: #1a3a1a; line-height: 1.8; }
+
+    /* RESULT */
+    .result-card { background: #fff; border-radius: 16px; padding: 16px; margin-top: 12px; border: 1.5px solid #d4e8d4; display: none; }
+    .r-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+    .r-rice   { background: #eaf5ea; color: #1a5a1a; }
+    .r-tomato { background: #fff0ea; color: #7a2800; }
+    .r-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; line-height: 1.2; }
+    .r-healthy { color: #1a7a3a; }
+    .r-disease { color: #c05000; }
+    .r-conf-label { font-size: 11px; color: #5a7a5a; margin-bottom: 4px; }
+    .r-conf-track { background: #e0ece0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 12px; }
+    .r-conf-fill  { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
+    .treat-box { border-radius: 0 12px 12px 0; padding: 10px 12px; font-size: 12px; line-height: 1.7; margin-bottom: 8px; }
+    .treat-ok   { background: #f0fbf0; border-left: 3px solid #1e7a3e; color: #1a3a1a; }
+    .treat-warn { background: #fff8f0; border-left: 3px solid #c05000; color: #5a2800; }
+    .treat-title { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    .treat-title-ok   { color: #1e7a3e; }
+    .treat-title-warn { color: #c05000; }
+    .w-alert { background: #fff8ee; border-left: 3px solid #e67e00; border-radius: 0 10px 10px 0; padding: 8px 12px; font-size: 12px; color: #7a3d00; line-height: 1.6; margin-bottom: 8px; }
+    .all-scores { margin-top: 12px; }
+    .all-title  { font-size: 10px; font-weight: 700; color: #7a9a7a; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+    .score-item { margin-bottom: 7px; }
+    .score-row  { display: flex; justify-content: space-between; font-size: 11px; color: #3a5a3a; margin-bottom: 3px; }
+    .score-track{ background: #e0ece0; border-radius: 4px; height: 5px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 4px; background: #7ab87a; transition: width 0.4s ease; }
+    .sync-badge { font-size: 11px; color: #5a7a5a; text-align: center; margin-top: 6px; }
+
+    /* BOTTOM NAV */
+    .nav { background: #fff; border-top: 1px solid #d4e8d4; display: flex; flex-shrink: 0; padding: 6px 0 max(8px, env(safe-area-inset-bottom)); }
+    .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 5px; background: none; border: none; cursor: pointer; }
+    .nav-svg { width: 22px; height: 22px; stroke: #9ab49a; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.15s; }
+    .nav-lbl { font-size: 10px; font-weight: 600; color: #8a9a8a; transition: color 0.15s; }
+    .nav-btn.active .nav-svg { stroke: #1e5c1e; }
+    .nav-btn.active .nav-lbl { color: #1e5c1e; }
+  </style>
+</head>
+<body>
+
+<!-- AUTH CHECK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const _sb = window.supabase.createClient(
+    'https://unwzvscuxsdnesqieahc.supabase.co',
+    'sb_publishable_lvUkeeahwkVKhNSKE1FvAQ_nVWf9g13'
+  );
+  // I-check ang session bago mag-load ang page
+  _sb.auth.getSession().then(({ data: { session } }) => {
+    if (!session) window.location.href = 'auth.html';
+  });
+</script>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="h-logo">🌿</div>
+    <div>
+      <div class="h-name">AgriSense PH</div>
+      <div class="h-sub" id="farmer-sub">Smart Disease Detector · Central Luzon</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center">
+    <button class="lang-btn" onclick="toggleLang()" id="lang-btn">FIL / EN</button>
+    <button class="logout-btn" onclick="doLogout()" style="background:rgba(255,80,80,0.25);color:#fff;border:none;padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600">🚪 Logout</button>
+  </div>
+</div>
+
+<!-- MAIN SCROLL -->
+<div class="scroll">
+
+  <!-- WEATHER -->
+  <div class="weather-card">
+    <div id="w-body"><div class="w-loading">📡 Kinukuha ang weather...</div></div>
+  </div>
+
+  <!-- CROP -->
+  <div class="sec">Pananim / Crop</div>
+  <div class="crop-row">
+    <button class="crop-btn active" id="crop-rice" onclick="setCrop('rice')">
+      <span class="crop-emoji">🌾</span>
+      <div class="crop-name">Palay</div>
+      <div class="crop-sub">Rice</div>
+    </button>
+    <button class="crop-btn" id="crop-tomato" onclick="setCrop('tomato')">
+      <span class="crop-emoji">🍅</span>
+      <div class="crop-name">Kamatis</div>
+      <div class="crop-sub">Tomato</div>
+    </button>
+  </div>
+
+  <!-- PHOTO -->
+  <div class="sec">Larawan / Photo</div>
+  <div class="preview" id="preview">
+    <video id="video" autoplay playsinline></video>
+    <img id="img" alt="leaf">
+    <div class="ph" id="ph">
+      <svg viewBox="0 0 48 48"><rect x="4" y="10" width="40" height="30" rx="4"/><circle cx="24" cy="25" r="8"/><path d="M16 10l3-5h10l3 5"/></svg>
+      <p id="ph-txt">Itutok ang camera sa dahon ng palay</p>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="ab cam-btn" id="cam-btn" onclick="toggleCam()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7l-2-4H10L8 7"/><circle cx="12" cy="14" r="3"/></svg>
+      Camera
+    </button>
+    <button class="ab upl-btn" onclick="document.getElementById('fi').click()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload
+    </button>
+  </div>
+  <input type="file" id="fi" accept="image/*" style="display:none" onchange="onUpload(event)">
+
+  <button class="detect-btn" id="det-btn" onclick="runDetect()" disabled>
+    <span id="det-txt">🔍 Suriin / Detect Disease</span>
+    <div class="spinner" id="det-spin"></div>
+  </button>
+  <div id="status">Nilo-load ang modelo...</div>
+
+  <!-- NOT A LEAF TOAST -->
+  <div class="toast" id="toast">
+    <div class="toast-title" id="toast-title">🍃 Hindi nakilala</div>
+    <div class="toast-msg"   id="toast-msg"></div>
+    <div class="toast-tips"  id="toast-tips"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-card" id="result">
+    <span class="r-badge r-rice" id="r-badge">🌾 Palay</span>
+    <div class="r-name r-disease" id="r-name">—</div>
+    <div class="r-conf-label" id="r-conf-lbl">Katumpakan: 0%</div>
+    <div class="r-conf-track"><div class="r-conf-fill" id="r-conf-fill" style="width:0%"></div></div>
+    <div id="r-treat"></div>
+    <div id="r-walert"></div>
+    <button class="speak-btn" id="speak-btn" onclick="speak()">🔊 Basahin nang Malakas</button>
+    <div class="all-scores" id="r-scores"></div>
+    <div class="sync-badge" id="sync-badge"></div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <button class="nav-btn" onclick="window.location.href='auth.html'">
+    <svg class="nav-svg" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="nav-lbl">Home</span>
+  </button>
+  <button class="nav-btn active" id="nav-detect">
+    <svg class="nav-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <span class="nav-lbl">Suriin</span>
+  </button>
+  <button class="nav-btn" onclick="window.location.href='analytics.html'">
+    <svg class="nav-svg" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span class="nav-lbl">Analytics</span>
+  </button>
+  <button class="nav-btn" onclick="loadWeather()">
+    <svg class="nav-svg" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
+    <span class="nav-lbl">Panahon</span>
+  </button>
+</nav>
+
+<!-- AI LIBRARIES -->
+<script src="libs/tf.min.js"></script>
+<script src="libs/teachablemachine-image.min.js"></script>
+
+<script>
+// ── SUPABASE ─────────────────────────────────────────────────
+const sb = window.supabase.createClient(
+  'https://unwzvscuxsdnesqieahc.supabase.co',
+  'sb_publishable_lvUkeeahwkVKhNSKE1FvAQ_nVWf9g13'
+);
+
+// ── STATE ─────────────────────────────────────────────────────
+let model       = null;
+let stream      = null;
+let camOn       = false;
+let imgReady    = false;
+let lastDisease = null;
+let lastCrop    = 'rice';
+let lang        = 'fil';
+let weather     = null;
+let userId      = null;
+
+// ── MODEL PATHS ───────────────────────────────────────────────
+const MODELS = { rice: './models/rice/', tomato: './models/tomato/' };
+
+// ── DISEASE DATA ──────────────────────────────────────────────
+const DISEASES = {
+  rice: {
+    'Healthy Rice': {
+      ok: true,
+      fil: { title:'Malusog ang Dahon!', steps:['Walang sakit na nakita.','Ipagpatuloy ang tamang pag-aalaga.','Sapat na tubig at pataba.'] },
+      eng: { title:'Leaf is Healthy!', steps:['No disease detected.','Continue proper care.','Ensure adequate water and fertilizer.'] },
+      voice: { fil:'Ang dahon ng palay ay malusog. Walang sakit na nakita.', eng:'The rice leaf is healthy. No disease detected.' }
+    },
+    'Rice Blast': {
+      ok: false,
+      fil: { title:'Lunas para sa Rice Blast', steps:['1. Mag-spray ng tricyclazole fungicide.','2. Bawasan ang nitrogen fertilizer.','3. Alisin at sunugin ang may sakit na dahon.','4. Pumili ng resistant variety.'] },
+      eng: { title:'Treatment for Rice Blast', steps:['1. Apply tricyclazole fungicide.','2. Reduce nitrogen fertilizer.','3. Remove and burn infected leaves.','4. Use blast-resistant varieties.'] },
+      voice: { fil:'Babala! Natukoy ang Rice Blast. Mag-spray ng fungicide na may tricyclazole.', eng:'Warning! Rice Blast detected. Apply fungicide with tricyclazole immediately.' }
+    },
+    'Bacterial Leaf Blight': {
+      ok: false,
+      fil: { title:'Lunas para sa Bacterial Leaf Blight', steps:['1. Huwag mag-spray ng tubig sa dahon.','2. Gumamit ng copper bactericide.','3. Alisan ng tubig ang bukid.','4. Magtanim ng resistant variety.'] },
+      eng: { title:'Treatment for Bacterial Leaf Blight', steps:['1. Avoid overhead irrigation.','2. Apply copper bactericide.','3. Drain the field.','4. Plant resistant varieties.'] },
+      voice: { fil:'Babala! Natukoy ang Bacterial Leaf Blight. Gumamit ng copper bactericide.', eng:'Warning! Bacterial Leaf Blight detected. Use copper bactericide.' }
+    },
+    'Brown Spot': {
+      ok: false,
+      fil: { title:'Lunas para sa Brown Spot', steps:['1. Mag-spray ng mancozeb fungicide.','2. Dagdagan ang potassium at zinc.','3. Ayusin ang drainage ng bukid.','4. Mag-treat ng binhi bago magtanim.'] },
+      eng: { title:'Treatment for Brown Spot', steps:['1. Apply mancozeb fungicide.','2. Add potassium and zinc fertilizer.','3. Ensure proper drainage.','4. Treat seeds before planting.'] },
+      voice: { fil:'Babala! Natukoy ang Brown Spot. Mag-spray ng mancozeb fungicide.', eng:'Warning! Brown Spot detected. Apply mancozeb fungicide.' }
+    }
+  },
+  tomato: {
+    'Healthy Tomato': {
+      ok: true,
+      fil: { title:'Malusog ang Dahon!', steps:['Walang sakit na nakita.','Ipagpatuloy ang tamang pag-aalaga.'] },
+      eng: { title:'Leaf is Healthy!', steps:['No disease detected.','Continue proper care.'] },
+      voice: { fil:'Ang dahon ng kamatis ay malusog.', eng:'The tomato leaf is healthy.' }
+    },
+    'Early Blight': {
+      ok: false,
+      fil: { title:'Lunas para sa Early Blight', steps:['1. Mag-spray ng chlorothalonil fungicide.','2. Alisin ang apektadong dahon sa ibaba.','3. Huwag mag-dilig ng gabi.','4. Mag-mulch sa paligid ng halaman.'] },
+      eng: { title:'Treatment for Early Blight', steps:['1. Apply chlorothalonil fungicide.','2. Remove affected lower leaves.','3. Avoid evening watering.','4. Apply mulch around base.'] },
+      voice: { fil:'Babala! Natukoy ang Early Blight. Mag-spray ng chlorothalonil fungicide.', eng:'Warning! Early Blight detected. Apply chlorothalonil fungicide.' }
+    },
+    'Late Blight': {
+      ok: false,
+      fil: { title:'AGARANG Lunas para sa Late Blight', steps:['⚠ MABILIS KUMAKALAT — kumilos agad!','1. Mag-spray AGAD ng metalaxyl fungicide.','2. Alisin at itapon ang may sakit.','3. Mag-spray sa lahat ng halaman sa paligid.','4. Ulitin tuwing 5-7 araw.'] },
+      eng: { title:'URGENT Treatment for Late Blight', steps:['⚠ SPREADS FAST — act immediately!','1. Apply metalaxyl fungicide NOW.','2. Remove and discard infected parts.','3. Spray surrounding plants too.','4. Reapply every 5-7 days.'] },
+      voice: { fil:'BABALA! Natukoy ang Late Blight. Ito ay mabilis kumakalat! Mag-spray AGAD ng metalaxyl fungicide.', eng:'WARNING! Late Blight detected. This spreads fast! Apply metalaxyl fungicide IMMEDIATELY.' }
+    },
+    'Leaf Mold': {
+      ok: false,
+      fil: { title:'Lunas para sa Leaf Mold', steps:['1. Mag-spray ng copper fungicide.','2. Pagbutihin ang hangin sa paligid.','3. Iwasang mabasa ang dahon.','4. Alisin ang apektadong dahon.'] },
+      eng: { title:'Treatment for Leaf Mold', steps:['1. Apply copper fungicide.','2. Improve air circulation.','3. Avoid wetting the leaves.','4. Remove affected leaves.'] },
+      voice: { fil:'Babala! Natukoy ang Leaf Mold. Mag-spray ng copper fungicide.', eng:'Warning! Leaf Mold detected. Apply copper fungicide.' }
+    }
+  }
+};
+
+// ── WEATHER RULES ─────────────────────────────────────────────
+const W_RULES = {
+  rice: [
+    { disease:'Rice Blast', check:w=>w.hum>=90&&w.temp>=22&&w.temp<=28, risk:'high', fil:'Napakataas ng panganib ng Rice Blast! Mag-spray ng fungicide NGAYON.', eng:'Extreme Rice Blast risk! Apply fungicide NOW.' },
+    { disease:'Bacterial Leaf Blight', check:w=>w.rain>=10&&w.wind>=20, risk:'high', fil:'Mataas na panganib ng Bacterial Blight! Alisan ng tubig ang bukid.', eng:'High Bacterial Blight risk! Drain the field.' }
+  ],
+  tomato: [
+    { disease:'Late Blight', check:w=>w.hum>=90&&w.temp<=20, risk:'high', fil:'NAPAKATAAS ng panganib ng Late Blight! Mag-spray ng metalaxyl AGAD.', eng:'EXTREME Late Blight risk! Apply metalaxyl IMMEDIATELY.' },
+    { disease:'Early Blight', check:w=>w.hum>=80&&w.temp>=24&&w.temp<=30, risk:'medium', fil:'Katamtamang panganib ng Early Blight.', eng:'Medium Early Blight risk.' }
+  ]
+};
+
+// ── INIT ──────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  // Get current user
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'auth.html'; return; }
+  userId = session.user.id;
+
+  // Get farmer profile
+  const { data: profile } = await sb.from('users').select('name,barangay,role').eq('id', userId).single();
+  if (profile) {
+    document.getElementById('farmer-sub').textContent = `👨‍🌾 ${profile.name} · ${profile.barangay || 'Central Luzon'}`;
+    // Redirect admin/DA to their dashboard
+    if (profile.role === 'admin') { window.location.href = 'admin.html'; return; }
+    if (profile.role === 'da_officer') { window.location.href = 'da-dashboard.html'; return; }
+  }
+
+  // Load AI model and weather
+  loadModel('rice');
+  loadWeather();
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+});
+
+// ── LOGOUT ────────────────────────────────────────────────────
+async function doLogout() {
+  await sb.auth.signOut();
+  window.location.href = 'auth.html';
+}
+
+// ── LANGUAGE ─────────────────────────────────────────────────
+function toggleLang() {
+  lang = lang === 'fil' ? 'eng' : 'fil';
+  document.getElementById('lang-btn').textContent = lang === 'fil' ? 'FIL / EN' : 'EN / FIL';
+  loadWeather();
+}
+
+// ── CROP ─────────────────────────────────────────────────────
+function setCrop(crop) {
+  lastCrop = crop;
+  document.getElementById('crop-rice').classList.toggle('active',   crop==='rice');
+  document.getElementById('crop-tomato').classList.toggle('active', crop==='tomato');
+  document.getElementById('ph-txt').textContent =
+    lang==='fil' ? `Itutok ang camera sa dahon ng ${crop==='rice'?'palay':'kamatis'}`
+                 : `Point camera at ${crop} leaf`;
+  clearResult();
+  if (!model || model._crop !== crop) loadModel(crop);
+}
+
+// ── MODEL ─────────────────────────────────────────────────────
+async function loadModel(crop) {
+  setStatus(lang==='fil' ? `Nilo-load ang modelo ng ${crop==='rice'?'palay':'kamatis'}...` : `Loading ${crop} model...`);
+  try {
+    model = await tmImage.load(MODELS[crop]+'model.json', MODELS[crop]+'metadata.json');
+    model._crop = crop;
+    setStatus(lang==='fil' ? 'Handa na! Kumuha ng larawan.' : 'Ready! Take a photo.');
+  } catch(e) {
+    setStatus(lang==='fil' ? `Hindi ma-load ang modelo. Suriin ang models/${crop}/ folder.` : `Cannot load model. Check models/${crop}/ folder.`);
+    console.error('Model error:', e);
+  }
+}
+
+// ── CAMERA ────────────────────────────────────────────────────
+async function toggleCam() {
+  if (camOn) { stopCam(); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false });
+    document.getElementById('video').srcObject = stream;
+    document.getElementById('video').style.display = 'block';
+    document.getElementById('img').style.display   = 'none';
+    document.getElementById('ph').style.display    = 'none';
+    document.getElementById('cam-btn').innerHTML   =
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Stop';
+    document.getElementById('cam-btn').style.background = '#8a1010';
+    camOn = true; imgReady = true; updateDetBtn(); clearResult();
+    setStatus(lang==='fil' ? 'Itutok sa dahon. Pindutin ang Suriin.' : 'Point at leaf. Press Detect.');
+  } catch(e) {
+    setStatus(lang==='fil' ? 'Hindi ma-access ang camera. Subukan ang Upload.' : 'Cannot access camera. Try Upload.');
+  }
+}
+
+function stopCam() {
+  if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  document.getElementById('video').style.display = 'none';
+  document.getElementById('ph').style.display    = 'flex';
+  document.getElementById('cam-btn').innerHTML   =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 7l-2-4H10L8 7"/><circle cx="12" cy="14" r="3"/></svg> Camera';
+  document.getElementById('cam-btn').style.background = '#1e5c1e';
+  camOn = false; imgReady = false; updateDetBtn();
+}
+
+function onUpload(e) {
+  const f = e.target.files[0]; if (!f) return;
+  stopCam();
+  const r = new FileReader();
+  r.onload = ev => {
+    document.getElementById('img').src = ev.target.result;
+    document.getElementById('img').style.display = 'block';
+    document.getElementById('ph').style.display  = 'none';
+    imgReady = true; updateDetBtn(); clearResult();
+    setStatus(lang==='fil' ? 'Larawan na-upload. Pindutin ang Suriin.' : 'Photo uploaded. Press Detect.');
+  };
+  r.readAsDataURL(f);
+  e.target.value = '';
+}
+
+function updateDetBtn() {
+  const btn = document.getElementById('det-btn');
+  btn.disabled = !imgReady; btn.style.opacity = imgReady ? '1' : '0.45';
+}
+
+// ── ROBOFLOW CONFIG ──────────────────────────────────────────
+const RF_API_KEY  = 'J9uM5hNHsDX6bmTbwsoh';
+const RF_MODEL_ID = 'rice-leaf-disease-twtlz/1';
+const RF_API_URL  = `https://classify.roboflow.com/${RF_MODEL_ID}`;
+
+// ── DETECTION ─────────────────────────────────────────────────
+async function runDetect() {
+  const src = camOn ? document.getElementById('video') : document.getElementById('img');
+
+  // Hide toast and result
+  document.getElementById('toast').style.display  = 'none';
+  document.getElementById('result').style.display = 'none';
+
+  // Loading state
+  document.getElementById('det-txt').style.display  = 'none';
+  document.getElementById('det-spin').style.display = 'inline-block';
+  document.getElementById('det-btn').disabled = true;
+  setStatus(lang==='fil' ? 'Sinusuri ang dahon...' : 'Analyzing leaf...');
+
+  try {
+    // I-convert ang image sa base64 para sa Roboflow API
+    const base64 = await getBase64(src);
+
+    // I-call ang Roboflow Classification API
+    const response = await fetch(`${RF_API_URL}?api_key=${RF_API_KEY}`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    base64.split(',')[1]
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error('Roboflow API error: ' + response.status + ' ' + errText);
+    }
+    const rfResult = await response.json();
+    console.log('Roboflow result:', rfResult);
+
+    // I-convert ang Roboflow result sa format na kaya ng showResult()
+    const preds = convertRoboflowResult(rfResult);
+    showResult(preds, src);
+
+  } catch(e) {
+    // Fallback sa Teachable Machine kung may error sa Roboflow
+    console.warn('Roboflow failed, trying Teachable Machine...', e);
+    if (model) {
+      try {
+        const preds = await model.predict(src);
+        showResult(preds, src);
+      } catch(e2) {
+        setStatus(lang==='fil' ? 'May error. Subukan muli.' : 'Error. Try again.');
+      }
+    } else {
+      setStatus(lang==='fil' ? 'May error. Tiyaking may internet.' : 'Error. Check internet connection.');
+    }
+  } finally {
+    document.getElementById('det-txt').style.display  = 'inline';
+    document.getElementById('det-spin').style.display = 'none';
+    document.getElementById('det-btn').disabled = false;
+    updateDetBtn();
+  }
+}
+
+// ── GET BASE64 ────────────────────────────────────────────────
+// I-convert ang video frame o uploaded image sa base64 string
+// Para mai-send sa Roboflow API
+function getBase64(src) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(src, 0, 0, 640, 480);
+    resolve(canvas.toDataURL('image/jpeg', 0.9));
+  });
+}
+
+// ── CONVERT ROBOFLOW RESULT ───────────────────────────────────
+// Roboflow classification API returns:
+// { predicted_classes: [...], predictions: { className: { confidence } } }
+function convertRoboflowResult(rfResult) {
+
+  // Class name mapping — Roboflow → Our disease names
+  const classMap = {
+    'Blast':                   'Rice Blast',
+    'blast':                   'Rice Blast',
+    'Rice Blast':              'Rice Blast',
+    'rice_blast':              'Rice Blast',
+    'Bacterial Blight':        'Bacterial Leaf Blight',
+    'bacterial_blight':        'Bacterial Leaf Blight',
+    'Bacterial_Blight':        'Bacterial Leaf Blight',
+    'Brown Spot':              'Brown Spot',
+    'brown_spot':              'Brown Spot',
+    'BrownSpot':               'Brown Spot',
+    'Healthy':                 lastCrop === 'rice' ? 'Healthy Rice' : 'Healthy Tomato',
+    'healthy':                 lastCrop === 'rice' ? 'Healthy Rice' : 'Healthy Tomato',
+    'Early Blight':            'Early Blight',
+    'early_blight':            'Early Blight',
+    'Late Blight':             'Late Blight',
+    'late_blight':             'Late Blight',
+    'Leaf Mold':               'Leaf Mold',
+    'leaf_mold':               'Leaf Mold'
+  };
+
+  // Handle classification API response format
+  // { predictions: { "ClassName": { "confidence": 0.95 }, ... } }
+  if (rfResult.predictions && typeof rfResult.predictions === 'object' && !Array.isArray(rfResult.predictions)) {
+    const entries = Object.entries(rfResult.predictions)
+      .map(([cls, data]) => ({
+        className: classMap[cls] || cls,
+        probability: typeof data === 'object' ? data.confidence : data
+      }))
+      .sort((a, b) => b.probability - a.probability);
+
+    if (entries.length > 0) return entries;
+  }
+
+  // Handle detection API response format
+  // { predictions: [{ class, confidence }] }
+  if (Array.isArray(rfResult.predictions) && rfResult.predictions.length > 0) {
+    const sorted = rfResult.predictions.sort((a, b) => b.confidence - a.confidence);
+    const top = sorted[0];
+    const mappedClass = classMap[top.class] || classMap[top.class?.toLowerCase()] || top.class;
+    const remaining = 1 - top.confidence;
+    const others = lastCrop === 'rice'
+      ? ['Rice Blast', 'Brown Spot', 'Bacterial Leaf Blight', 'Healthy Rice']
+      : ['Early Blight', 'Late Blight', 'Leaf Mold', 'Healthy Tomato'];
+    const result = [{ className: mappedClass, probability: top.confidence }];
+    others.filter(c => c !== mappedClass).forEach((c, i) => {
+      result.push({ className: c, probability: remaining * [0.5, 0.3, 0.2][i] || 0.01 });
+    });
+    return result;
+  }
+
+  // Kung walang detection — healthy
+  console.warn('No predictions from Roboflow, defaulting to healthy');
+  return [
+    { className: lastCrop === 'rice' ? 'Healthy Rice' : 'Healthy Tomato', probability: 0.90 },
+    { className: 'Rice Blast',   probability: 0.05 },
+    { className: 'Brown Spot',   probability: 0.03 },
+    { className: 'Bacterial Leaf Blight', probability: 0.02 }
+  ];
+}
+
+// ── SHOW RESULT ───────────────────────────────────────────────
+function showResult(preds, src) {
+  const sorted = [...preds].sort((a,b)=>b.probability-a.probability);
+  const top    = sorted[0];
+  const pct    = Math.round(top.probability * 100);
+
+  // ── LAYER 1: GREEN PIXEL CHECK ────────────────────────────
+  const leafCheck = checkGreenPixels(src);
+  if (!leafCheck.isLeaf) {
+    showToast(leafCheck.reason);
+    setStatus(lang==='fil' ? '⚠ Hindi nakilala — subukan muli ng malinaw na dahon.' : '⚠ Not recognized — try again with a clear leaf photo.');
+    return;
+  }
+
+  // ── LAYER 2: ENTROPY CHECK ────────────────────────────────
+  const entropy = calcEntropy(sorted);
+  const gap     = sorted[0].probability - (sorted[1]?.probability || 0);
+  if (entropy > 1.7 || (top.probability < 0.50 && gap < 0.20)) {
+    showToast('confused');
+    setStatus(lang==='fil' ? '⚠ Hindi sigurado ang AI — subukan muli.' : '⚠ AI not confident — try again.');
+    return;
+  }
+
+  // ── LAYER 3: CONFIDENCE CHECK ─────────────────────────────
+  if (pct < 70) {
+    showToast('low_conf');
+    setStatus(lang==='fil' ? `Mababang confidence (${pct}%) — subukan muli.` : `Low confidence (${pct}%) — try again.`);
+    return;
+  }
+
+  // ── NORMAL RESULT ─────────────────────────────────────────
+  lastDisease = top.className;
+  const d = (DISEASES[lastCrop]||{})[top.className];
+  const isOk = d?.ok;
+  const ld   = d?.[lang] || { title: top.className, steps: [] };
+
+  // Badge
+  const badge = document.getElementById('r-badge');
+  badge.textContent = lastCrop==='rice' ? '🌾 Palay' : '🍅 Kamatis';
+  badge.className   = 'r-badge ' + (lastCrop==='rice' ? 'r-rice' : 'r-tomato');
+
+  // Name
+  const nameEl = document.getElementById('r-name');
+  nameEl.textContent = top.className;
+  nameEl.className   = 'r-name ' + (isOk ? 'r-healthy' : 'r-disease');
+  nameEl.style.color = '';
+
+  // Confidence
+  document.getElementById('r-conf-lbl').textContent = (lang==='fil'?'Katumpakan: ':'Confidence: ') + pct + '%';
+  const fill = document.getElementById('r-conf-fill');
+  fill.style.width      = pct + '%';
+  fill.style.background = isOk ? '#1e7a3e' : '#c05000';
+
+  // Treatment
+  const stepsHtml = ld.steps.map(s=>`<div style="margin-bottom:3px">${s}</div>`).join('');
+  document.getElementById('r-treat').innerHTML = `
+    <div class="treat-box ${isOk?'treat-ok':'treat-warn'}">
+      <div class="treat-title ${isOk?'treat-title-ok':'treat-title-warn'}">${ld.title}</div>
+      ${stepsHtml}
+    </div>`;
+
+  // Weather alert
+  const walert = document.getElementById('r-walert');
+  walert.innerHTML = '';
+  if (weather && !isOk) {
+    const risks = evalWeatherRisk(lastCrop, weather);
+    const match = risks.find(r => top.className.toLowerCase().includes(r.disease.split(' ')[0].toLowerCase()));
+    if (match) walert.innerHTML = `<div class="w-alert"><strong>⚠ Weather Alert</strong><br>${match[lang]}</div>`;
+  }
+
+  // All scores
+  document.getElementById('r-scores').innerHTML =
+    `<div class="all-title">${lang==='fil'?'Lahat ng Resulta':'All Scores'}</div>` +
+    sorted.map(p => {
+      const p100 = Math.round(p.probability*100);
+      return `<div class="score-item"><div class="score-row"><span>${p.className}</span><span>${p100}%</span></div><div class="score-track"><div class="score-fill" style="width:${p100}%"></div></div></div>`;
+    }).join('');
+
+  // Show result
+  document.getElementById('result').style.display    = 'block';
+  document.getElementById('speak-btn').style.display = 'block';
+
+  // Auto-speak
+  setTimeout(() => speak(), 600);
+
+  // Save to Supabase
+  saveDetection(top.className, pct);
+
+  setStatus(lang==='fil' ? 'Tapos na ang pagsusuri!' : 'Detection complete!');
+
+  // Scroll to result
+  setTimeout(() => document.getElementById('result').scrollIntoView({ behavior:'smooth', block:'start' }), 300);
+}
+
+// ── TOAST (Not a Leaf / Low Confidence) ──────────────────────
+function showToast(reason) {
+  const crop = lastCrop==='rice' ? (lang==='fil'?'palay':'rice') : (lang==='fil'?'kamatis':'tomato');
+  const msgs = {
+    too_dark:   { fil:`Masyadong madilim ang larawan. Pumunta sa mas maliwanag na lugar.`,           eng:`Image too dark. Move to a brighter area.` },
+    no_green:   { fil:`Hindi mukhang dahon ng ${crop}. Itutok ng direkta sa dahon.`,                  eng:`Doesn't look like a ${crop} leaf. Point directly at the leaf.` },
+    confused:   { fil:`Hindi sigurado ang AI. Posibleng hindi dahon ng ${crop} ang ipinakita.`,       eng:`AI is confused. This may not be a ${crop} leaf.` },
+    low_conf:   { fil:`Mababang confidence. Malabo ang larawan o hindi sapat ang ilaw.`,             eng:`Low confidence. Photo may be blurry or poorly lit.` }
+  };
+  const tips = lang==='fil'
+    ? ['Itutok ng direkta sa dahon — puno ng frame', 'Sapat ang ilaw — natural na liwanag ng araw', 'Hawakan nang matatag ang phone', 'Malapit lang — hindi masyadong malayo']
+    : ['Frame directly at leaf — fill the frame', 'Good lighting — natural daylight is best', 'Hold the phone steady', 'Get close — not too far away'];
+
+  document.getElementById('toast-title').textContent = lang==='fil' ? '🍃 Hindi nakilala ang dahon' : '🍃 Leaf not recognized';
+  document.getElementById('toast-msg').textContent   = (msgs[reason]||msgs.confused)[lang];
+  document.getElementById('toast-tips').innerHTML    = tips.map(t=>`✓ ${t}`).join('<br>');
+  document.getElementById('toast').style.display     = 'block';
+  setTimeout(() => document.getElementById('toast').scrollIntoView({ behavior:'smooth', block:'start' }), 200);
+}
+
+// ── GREEN PIXEL CHECK ─────────────────────────────────────────
+function checkGreenPixels(src) {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 100; canvas.height = 100;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(src, 0, 0, 100, 100);
+    const data = ctx.getImageData(0, 0, 100, 100).data;
+    let green = 0, dark = 0, brown = 0, total = data.length / 4;
+
+    for (let i=0; i<data.length; i+=4) {
+      const r=data[i], g=data[i+1], b=data[i+2];
+      if (g>r*1.1 && g>b*1.1 && g>40) green++;
+      if (r<30 && g<30 && b<30) dark++;
+      if (r>120 && g>80 && b<80 && r>b*1.5) brown++;
+    }
+
+    const darkR  = dark/total;
+    const leafR  = (green + brown*0.7)/total;
+
+    if (darkR > 0.60) return { isLeaf:false, reason:'too_dark' };
+    if (leafR < 0.12) return { isLeaf:false, reason:'no_green' };
+    return { isLeaf:true };
+  } catch(e) {
+    return { isLeaf:true }; // Benefit of the doubt
+  }
+}
+
+// ── ENTROPY ───────────────────────────────────────────────────
+function calcEntropy(preds) {
+  return preds.reduce((e,p) => p.probability>0 ? e - p.probability*Math.log2(p.probability) : e, 0);
+}
+
+// ── VOICE ─────────────────────────────────────────────────────
+function speak() {
+  if (!lastDisease) return;
+  const d = (DISEASES[lastCrop]||{})[lastDisease];
+  if (!d?.voice) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(d.voice[lang]);
+  u.lang  = lang==='fil' ? 'fil-PH' : 'en-US';
+  u.rate  = 0.9;
+  const v = window.speechSynthesis.getVoices().find(x => x.lang.startsWith(lang==='fil'?'fil':'en'));
+  if (v) u.voice = v;
+  window.speechSynthesis.speak(u);
+}
+
+// ── WEATHER ───────────────────────────────────────────────────
+async function loadWeather() {
+  document.getElementById('w-body').innerHTML = `<div class="w-loading">📡 ${lang==='fil'?'Kinukuha ang weather...':'Fetching weather...'}</div>`;
+  try {
+    const pos = await new Promise((res,rej) => navigator.geolocation.getCurrentPosition(res,rej,{timeout:10000}));
+    const {latitude:lat, longitude:lon} = pos.coords;
+
+    // Reverse geocode
+    let locName = `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+    try {
+      const gr = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`,{headers:{'User-Agent':'AgriSensePH/2.0'}});
+      const gd = await gr.json();
+      const a  = gd.address||{};
+      locName = [a.city||a.town||a.municipality, a.province||a.state].filter(Boolean).join(', ') || locName;
+    } catch(e){}
+
+    const wr = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,weather_code&timezone=Asia/Manila`);
+    const wj = await wr.json();
+    const c  = wj.current;
+
+    weather = { temp:Math.round(c.temperature_2m), hum:Math.round(c.relative_humidity_2m), rain:Math.round(c.precipitation*10)/10, wind:Math.round(c.wind_speed_10m), code:c.weather_code, loc:locName };
+
+    renderWeather();
+  } catch(e) {
+    const msg = e.code===1
+      ? (lang==='fil'?'Hindi pinayagan ang location. I-allow sa browser settings.':'Location denied. Enable in browser settings.')
+      : (lang==='fil'?'Hindi makuha ang weather. Tiyaking may internet.':'Cannot get weather. Check internet connection.');
+    document.getElementById('w-body').innerHTML = `<div class="w-err">${msg}<br><button onclick="loadWeather()" style="margin-top:8px;padding:4px 12px;border-radius:8px;border:1px solid rgba(255,150,150,0.5);background:transparent;color:#ffaaaa;cursor:pointer;font-size:11px">${lang==='fil'?'Subukan Muli':'Try Again'}</button></div>`;
+  }
+}
+
+function renderWeather() {
+  if (!weather) return;
+  const w = weather;
+  const risks = evalWeatherRisk(lastCrop, w);
+  const level = risks.some(r=>r.risk==='high') ? 'high' : risks.some(r=>r.risk==='medium') ? 'medium' : 'low';
+  const icons = { 0:'☀️', 1:'⛅', 2:'⛅', 3:'☁️' };
+  const icon  = w.code<=3 ? (icons[w.code]||'⛅') : w.code<=49 ? '🌫️' : w.code<=69 ? '🌧️' : '⛈️';
+  const riskTexts = {
+    low:    { fil:'Mababang Panganib · Magandang panahon.',    eng:'Low Risk · Good conditions.' },
+    medium: { fil:'Katamtamang Panganib · Mag-ingat.',          eng:'Medium Risk · Be cautious.' },
+    high:   { fil:'⚠ MATAAS NA PANGANIB · Kailangan ng aksyon!', eng:'⚠ HIGH RISK · Action needed!' }
+  };
+  const topRisk = risks[0];
+
+  document.getElementById('w-body').innerHTML = `
+    <div class="w-top">
+      <div>
+        <div class="w-loc">📍 ${w.loc}</div>
+        <div class="w-temp">${w.temp}°</div>
+      </div>
+      <div style="text-align:right">
+        <div class="w-icon">${icon}</div>
+        <button class="w-refresh" onclick="loadWeather()">↻ ${lang==='fil'?'I-refresh':'Refresh'}</button>
+      </div>
+    </div>
+    <div class="w-stats">
+      <div class="w-stat"><span class="w-stat-i">💧</span><span class="w-stat-v">${w.hum}%</span><span class="w-stat-l">Humidity</span></div>
+      <div class="w-stat"><span class="w-stat-i">🌧️</span><span class="w-stat-v">${w.rain}mm</span><span class="w-stat-l">${lang==='fil'?'Ulan':'Rain'}</span></div>
+      <div class="w-stat"><span class="w-stat-i">💨</span><span class="w-stat-v">${w.wind}</span><span class="w-stat-l">km/h</span></div>
+    </div>
+    <div class="risk-banner ${level}">
+      <div class="risk-dot ${level}"></div>
+      <div>
+        <div class="risk-title">${riskTexts[level][lang]}</div>
+        ${topRisk ? `<div class="risk-msg">${topRisk[lang]}</div>` : ''}
+        <button onclick="speakWeather()" style="margin-top:6px;background:rgba(255,255,255,0.15);border:none;border-radius:8px;padding:4px 12px;color:#fff;font-size:11px;cursor:pointer">🔊 ${lang==='fil'?'Pakinggan':'Listen'}</button>
+      </div>
+    </div>`;
+}
+
+function evalWeatherRisk(crop, w) {
+  const results=[], seen=new Set();
+  for (const r of (W_RULES[crop]||[])) {
+    if (!seen.has(r.disease) && r.check(w)) { results.push(r); seen.add(r.disease); }
+  }
+  return results.sort((a,b) => (b.risk==='high'?2:1)-(a.risk==='high'?2:1));
+}
+
+function speakWeather() {
+  if (!weather) return;
+  const w = weather;
+  const risks = evalWeatherRisk(lastCrop, w);
+  const level = risks.some(r=>r.risk==='high')?'high':risks.some(r=>r.risk==='medium')?'medium':'low';
+  let txt = lang==='fil'
+    ? `Panahon ngayon: ${w.temp} degrees, ${w.hum} porsyento humidity. ${level==='high'?'MATAAS NA PANGANIB!':level==='medium'?'Katamtamang panganib.':'Mababang panganib.'}`
+    : `Current weather: ${w.temp} degrees, ${w.hum} percent humidity. ${level==='high'?'HIGH RISK!':level==='medium'?'Medium risk.':'Low risk.'}`;
+  if (risks[0]) txt += ' ' + risks[0][lang];
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = lang==='fil'?'fil-PH':'en-US'; u.rate=0.9;
+  window.speechSynthesis.speak(u);
+}
+
+// ── SAVE TO SUPABASE ──────────────────────────────────────────
+async function saveDetection(disease, confidence) {
+  if (!userId) return;
+  try {
+    const sev = confidence>=90?'severe':confidence>=80?'moderate':'mild';
+    const { error } = await sb.from('detections').insert({
+      user_id:       userId,
+      crop:          lastCrop,
+      disease:       disease,
+      confidence:    confidence,
+      severity:      sev,
+      temperature:   weather?.temp || null,
+      humidity:      weather?.hum  || null,
+      rain:          weather?.rain || null,
+      wind:          weather?.wind || null,
+      location_name: weather?.loc  || null,
+      created_at:    new Date().toISOString()
+    });
+    if (error) throw error;
+    document.getElementById('sync-badge').textContent = lang==='fil'?'✓ Na-save sa cloud':'✓ Saved to cloud';
+    // Check for outbreak
+    checkOutbreak(disease);
+  } catch(e) {
+    document.getElementById('sync-badge').textContent = lang==='fil'?'Offline — na-save sa device':'Offline — saved locally';
+    // Save to localStorage as backup
+    const q = JSON.parse(localStorage.getItem('offline_queue')||'[]');
+    q.push({ user_id:userId, crop:lastCrop, disease, confidence, created_at:new Date().toISOString() });
+    localStorage.setItem('offline_queue', JSON.stringify(q));
+  }
+}
+
+async function checkOutbreak(disease) {
+  if (disease.toLowerCase().includes('healthy')) return;
+  try {
+    const since = new Date(); since.setDate(since.getDate()-7);
+    const { data } = await sb.from('detections').select('id').eq('disease',disease).gte('created_at',since.toISOString());
+    if (data && data.length >= 3) {
+      const { data: existing } = await sb.from('alerts').select('id').eq('disease',disease).eq('resolved',false).limit(1);
+      if (!existing?.length) {
+        await sb.from('alerts').insert({ disease, severity: data.length>=5?'high':'medium', location_name: weather?.loc||null, affected_count: data.length, message:`${data.length} cases of ${disease} in 7 days.`, resolved:false, created_at:new Date().toISOString() });
+      }
+    }
+  } catch(e) { console.warn('Outbreak check failed:', e); }
+}
+
+// ── HELPERS ───────────────────────────────────────────────────
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+function clearResult() {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('toast').style.display  = 'none';
+  document.getElementById('speak-btn').style.display = 'none';
+  lastDisease = null;
+}
+
+// Sync offline queue when back online
+window.addEventListener('online', async () => {
+  const q = JSON.parse(localStorage.getItem('offline_queue')||'[]');
+  if (!q.length) return;
+  const failed = [];
+  for (const item of q) {
+    const { error } = await sb.from('detections').insert(item);
+    if (error) failed.push(item);
+  }
+  localStorage.setItem('offline_queue', JSON.stringify(failed));
+});
+</script>
+<script>
+// ── SERVICE WORKER REGISTRATION ──────────────────────────────
+// Ini-register ang Service Worker para sa offline support.
+// Gagana ito sa HTTPS (GitHub Pages) — hindi sa localhost.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[App] Service Worker registered:', reg.scope))
+      .catch(err => console.warn('[App] Service Worker failed:', err));
+  });
+}
+</script>
+</body>
+</html>

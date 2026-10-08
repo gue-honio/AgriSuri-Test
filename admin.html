@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriSense PH — Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f5f0;min-height:100vh}
+    .topnav{background:#1e5c1e;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .nav-left{display:flex;align-items:center;gap:10px}
+    .nav-title{color:#fff;font-size:16px;font-weight:700}
+    .nav-sub{color:#a8d4a8;font-size:10px}
+    .nav-right{display:flex;align-items:center;gap:8px}
+    .nav-user{color:#a8d4a8;font-size:12px}
+    .btn-sm{background:rgba(255,255,255,0.15);border:none;color:#fff;padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;font-weight:600}
+    .live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:#fff}
+    .live-dot{width:6px;height:6px;background:#7aff7a;border-radius:50%;animation:blink 1.5s infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+    .main{max-width:1200px;margin:0 auto;padding:20px}
+    .sec{font-size:11px;font-weight:700;color:#3a6a3a;letter-spacing:.07em;text-transform:uppercase;margin:20px 0 10px;display:flex;align-items:center;gap:6px}
+    .sec::after{content:'';flex:1;height:1px;background:#d4e8d4}
+    .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:4px}
+    .metric-card{background:#fff;border-radius:14px;padding:16px;border:.5px solid #d4e8d4}
+    .m-icon{font-size:22px;margin-bottom:8px}
+    .m-val{font-size:32px;font-weight:800;color:#1a3a1a;line-height:1}
+    .m-lbl{font-size:12px;color:#5a7a5a;margin-top:4px}
+    .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:4px}
+    .chart-card{background:#fff;border-radius:14px;padding:16px;border:.5px solid #d4e8d4}
+    .chart-title{font-size:13px;font-weight:700;color:#1a3a1a;margin-bottom:14px}
+    .chart-wrap{position:relative;height:220px}
+    .alert-item{background:#fff;border-radius:14px;padding:14px 16px;border:.5px solid #d4e8d4;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+    .alert-item.high{border-left:4px solid #c02020}
+    .alert-item.medium{border-left:4px solid #c08000}
+    .a-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+    .a-dot.high{background:#c02020;animation:blink 1s infinite}
+    .a-dot.medium{background:#c08000}
+    .a-disease{font-size:14px;font-weight:700;color:#1a3a1a}
+    .a-loc{font-size:12px;color:#5a7a5a;margin-top:2px}
+    .a-count{font-size:12px;color:#c05000;margin-top:2px;font-weight:600}
+    .a-time{font-size:11px;color:#9aaa9a;margin-top:2px}
+    .a-resolve{margin-left:auto;padding:5px 12px;background:#eaf5ea;border:none;border-radius:8px;font-size:11px;font-weight:600;color:#1a5a1a;cursor:pointer;flex-shrink:0}
+    .table-card{background:#fff;border-radius:14px;border:.5px solid #d4e8d4;overflow:hidden;margin-bottom:14px}
+    .table-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e8f0e8}
+    .table-title{font-size:13px;font-weight:700;color:#1a3a1a}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{background:#f5fbf5;padding:10px 14px;text-align:left;font-weight:600;color:#3a6a3a;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #e8f0e8}
+    td{padding:10px 14px;border-bottom:1px solid #f0f8f0;color:#1a3a1a}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8fcf8}
+    .d-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#fff0ea;color:#7a2800}
+    .d-badge.ok{background:#eaf5ea;color:#1a5a1a}
+    .s-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+    .s-mild{background:#eaf5ea;color:#1a5a1a}
+    .s-moderate{background:#fff3cc;color:#7a4a00}
+    .s-severe{background:#ffe0e0;color:#8a1010}
+    .filter-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .fsel{padding:7px 12px;border:1.5px solid #d4e8d4;border-radius:10px;font-size:13px;background:#fff;color:#1a3a1a;cursor:pointer;outline:none}
+    .loading-overlay{position:fixed;inset:0;background:rgba(240,245,240,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+    .loading-spin{width:40px;height:40px;border:4px solid #d4e8d4;border-top-color:#1e5c1e;border-radius:50%;animation:spin .7s linear infinite;margin-bottom:12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .empty{text-align:center;padding:24px;color:#7a9a7a;font-size:13px}
+    .btn-export{padding:6px 14px;background:#1e5c1e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer}
+    @media(max-width:600px){.main{padding:12px}.metric-grid{grid-template-columns:repeat(2,1fr)}.chart-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="loading-spin"></div>
+  <div style="font-size:13px;color:#3a6a3a;font-weight:600">Nilo-load ang Admin Dashboard...</div>
+</div>
+
+<nav class="topnav">
+  <div class="nav-left">
+    <span style="font-size:22px">🌿</span>
+    <div>
+      <div class="nav-title">AgriSense PH — Admin</div>
+      <div class="nav-sub">Community Analytics Dashboard</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="live-badge"><div class="live-dot"></div>Live</span>
+    <span class="nav-user" id="admin-name">—</span>
+    <button class="btn-sm" onclick="doLogout()">Logout</button>
+  </div>
+</nav>
+
+<main class="main">
+
+  <div class="sec">Buod ng Komunidad</div>
+  <div class="metric-grid">
+    <div class="metric-card"><div class="m-icon">👨‍🌾</div><div class="m-val" id="m-farmers">—</div><div class="m-lbl">Farmers</div></div>
+    <div class="metric-card"><div class="m-icon">🔍</div><div class="m-val" id="m-total">—</div><div class="m-lbl">Total Detections</div></div>
+    <div class="metric-card"><div class="m-icon">🦠</div><div class="m-val" id="m-rate">—</div><div class="m-lbl">Disease Rate</div></div>
+    <div class="metric-card"><div class="m-icon">🚨</div><div class="m-val" id="m-alerts">—</div><div class="m-lbl">Active Alerts</div></div>
+    <div class="metric-card"><div class="m-icon">🌾</div><div class="m-val" id="m-rice">—</div><div class="m-lbl">Rice Detections</div></div>
+    <div class="metric-card"><div class="m-icon">🍅</div><div class="m-val" id="m-tomato">—</div><div class="m-lbl">Tomato Detections</div></div>
+  </div>
+
+  <div class="sec">Charts</div>
+  <div class="chart-grid">
+    <div class="chart-card"><div class="chart-title">🥧 Disease Breakdown</div><div class="chart-wrap"><canvas id="c-disease"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">📈 Weekly Trend (Last 4 Weeks)</div><div class="chart-wrap"><canvas id="c-trend"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">📊 Rice vs Tomato</div><div class="chart-wrap"><canvas id="c-crop"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">⚠ Severity Distribution</div><div class="chart-wrap"><canvas id="c-severity"></canvas></div></div>
+  </div>
+
+  <div class="sec">Outbreak Alerts</div>
+  <div id="alerts-container"><div class="empty">Walang active alerts.</div></div>
+
+  <div class="sec">Mga Detection Records</div>
+  <div class="filter-row">
+    <select class="fsel" id="f-crop" onchange="loadData()">
+      <option value="">Lahat ng Crops</option>
+      <option value="rice">Palay / Rice</option>
+      <option value="tomato">Kamatis / Tomato</option>
+    </select>
+    <select class="fsel" id="f-days" onchange="loadData()">
+      <option value="7">Huling 7 Araw</option>
+      <option value="30" selected>Huling 30 Araw</option>
+      <option value="90">Huling 3 Buwan</option>
+    </select>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-title">Detection Records</div>
+      <button class="btn-export" onclick="exportCSV()">📥 Export CSV</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Petsa</th><th>Farmer</th><th>Barangay</th><th>Crop</th><th>Disease</th><th>Confidence</th><th>Severity</th></tr></thead>
+        <tbody id="det-tbody"><tr><td colspan="7" class="empty">Nilo-load...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="sec">Farmers (<span id="farmers-count">0</span>)</div>
+  <div class="table-card">
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>Pangalan</th><th>Email</th><th>Barangay</th><th>Detections</th><th>Naka-register</th></tr></thead>
+        <tbody id="farmers-tbody"><tr><td colspan="5" class="empty">Nilo-load...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb = window.supabase.createClient(
+  'https://unwzvscuxsdnesqieahc.supabase.co',
+  'sb_publishable_lvUkeeahwkVKhNSKE1FvAQ_nVWf9g13'
+);
+
+let dets=[], farmers=[], alerts=[], charts={};
+
+const COLORS = {'Rice Blast':'#c05000','Bacterial Leaf Blight':'#b84a00','Brown Spot':'#8a5a00','Healthy Rice':'#1e7a3e','Early Blight':'#d04000','Late Blight':'#a03000','Leaf Mold':'#7a4a20','Healthy Tomato':'#2d8a4e'};
+
+// ── INIT ────────────────────────────────────────────────────
+sb.auth.getSession().then(async({data:{session}})=>{
+  if(!session){window.location.href='auth.html';return}
+  const{data:p}=await sb.from('users').select('name,role').eq('id',session.user.id).single();
+  if(!p||!['admin','da_officer'].includes(p.role)){alert('Walang access — admin lang.');await doLogout();return}
+  document.getElementById('admin-name').textContent=p.name||session.user.email;
+  await loadData();
+  setupRealtime();
+  document.getElementById('loading').style.display='none';
+});
+
+async function loadData(){
+  const crop=document.getElementById('f-crop').value;
+  const days=parseInt(document.getElementById('f-days').value)||30;
+  const since=new Date();since.setDate(since.getDate()-days);
+
+  let q=sb.from('detections').select('*,users(name,email,barangay)').gte('created_at',since.toISOString()).order('created_at',{ascending:false});
+  if(crop) q=q.eq('crop',crop);
+
+  const[dr,fr,ar]=await Promise.all([
+    q.limit(500),
+    sb.from('users').select('*').eq('role','farmer').order('created_at',{ascending:false}),
+    sb.from('alerts').select('*').eq('resolved',false).order('created_at',{ascending:false}).limit(10)
+  ]);
+
+  dets=dr.data||[];farmers=fr.data||[];alerts=ar.data||[];
+  renderAll();
+}
+
+function renderAll(){
+  renderMetrics();renderCharts();renderAlerts();renderDetTable();renderFarmersTable();
+}
+
+function renderMetrics(){
+  const total=dets.length;
+  const diseased=dets.filter(d=>!d.disease?.toLowerCase().includes('healthy')).length;
+  const rice=dets.filter(d=>d.crop==='rice').length;
+  const tomato=dets.filter(d=>d.crop==='tomato').length;
+  document.getElementById('m-farmers').textContent=farmers.length;
+  document.getElementById('m-total').textContent=total;
+  document.getElementById('m-rate').textContent=total>0?Math.round(diseased/total*100)+'%':'0%';
+  document.getElementById('m-alerts').textContent=alerts.length;
+  document.getElementById('m-rice').textContent=rice;
+  document.getElementById('m-tomato').textContent=tomato;
+}
+
+function renderCharts(){
+  // Disease breakdown
+  const dc={};dets.forEach(d=>dc[d.disease]=(dc[d.disease]||0)+1);
+  const ds=Object.entries(dc).sort((a,b)=>b[1]-a[1]);
+  if(charts.d)charts.d.destroy();
+  charts.d=new Chart(document.getElementById('c-disease'),{type:'doughnut',data:{labels:ds.map(([d])=>d),datasets:[{data:ds.map(([,c])=>c),backgroundColor:ds.map(([d])=>COLORS[d]||'#7ab87a'),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},padding:8}}}}});
+
+  // Weekly trend
+  const now=new Date(),wk=[0,0,0,0],wl=['4 linggo','3 linggo','2 linggo','Nakaraang linggo'];
+  dets.forEach(d=>{const da=Math.floor((now-new Date(d.created_at))/86400000);if(da<7)wk[3]++;else if(da<14)wk[2]++;else if(da<21)wk[1]++;else if(da<28)wk[0]++;});
+  if(charts.t)charts.t.destroy();
+  charts.t=new Chart(document.getElementById('c-trend'),{type:'line',data:{labels:wl,datasets:[{label:'Detections',data:wk,borderColor:'#1e5c1e',backgroundColor:'rgba(30,92,30,.1)',tension:.3,fill:true,pointRadius:5,pointBackgroundColor:'#1e5c1e'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+
+  // Crop
+  const rice=dets.filter(d=>d.crop==='rice').length,tom=dets.filter(d=>d.crop==='tomato').length;
+  if(charts.c)charts.c.destroy();
+  charts.c=new Chart(document.getElementById('c-crop'),{type:'bar',data:{labels:['Palay','Kamatis'],datasets:[{data:[rice,tom],backgroundColor:['#1e5c1e','#c05000'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+
+  // Severity
+  const mild=dets.filter(d=>d.severity==='mild').length,mod=dets.filter(d=>d.severity==='moderate').length,sev=dets.filter(d=>d.severity==='severe').length;
+  if(charts.s)charts.s.destroy();
+  charts.s=new Chart(document.getElementById('c-severity'),{type:'bar',data:{labels:['Mild','Moderate','Severe'],datasets:[{data:[mild,mod,sev],backgroundColor:['#7ab87a','#c08000','#c02020'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+}
+
+function renderAlerts(){
+  const c=document.getElementById('alerts-container');
+  if(!alerts.length){c.innerHTML='<div class="empty">Walang active outbreak alerts ngayon. ✓</div>';return}
+  c.innerHTML=alerts.map(a=>`
+    <div class="alert-item ${a.severity}">
+      <div class="a-dot ${a.severity}"></div>
+      <div style="flex:1">
+        <div class="a-disease">🚨 ${a.disease}</div>
+        <div class="a-loc">📍 ${a.location_name||'Unknown location'}</div>
+        <div class="a-count">${a.affected_count} cases sa loob ng 7 araw</div>
+        <div class="a-time">${fmtDate(a.created_at)}</div>
+      </div>
+      <button class="a-resolve" onclick="resolveAlert('${a.id}')">✓ Resolve</button>
+    </div>`).join('');
+}
+
+async function resolveAlert(id){
+  if(!confirm('I-resolve ang alert na ito?'))return;
+  await sb.from('alerts').update({resolved:true,resolved_at:new Date().toISOString()}).eq('id',id);
+  alerts=alerts.filter(a=>a.id!==id);renderAlerts();
+  document.getElementById('m-alerts').textContent=alerts.length;
+}
+
+function renderDetTable(){
+  const tbody=document.getElementById('det-tbody');
+  if(!dets.length){tbody.innerHTML='<tr><td colspan="7" class="empty">Walang detections pa.</td></tr>';return}
+  tbody.innerHTML=dets.slice(0,100).map(d=>{
+    const isH=d.disease?.toLowerCase().includes('healthy');
+    return`<tr>
+      <td style="white-space:nowrap;font-size:12px">${fmtDate(d.created_at)}</td>
+      <td>${d.users?.name||'—'}</td>
+      <td>${d.users?.barangay||d.location_name||'—'}</td>
+      <td>${d.crop==='rice'?'🌾 Palay':'🍅 Kamatis'}</td>
+      <td><span class="d-badge ${isH?'ok':''}">${d.disease||'—'}</span></td>
+      <td>${d.confidence||'—'}%</td>
+      <td><span class="s-badge s-${d.severity||'mild'}">${d.severity||'mild'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderFarmersTable(){
+  const tbody=document.getElementById('farmers-tbody');
+  document.getElementById('farmers-count').textContent=farmers.length;
+  if(!farmers.length){tbody.innerHTML='<tr><td colspan="5" class="empty">Walang registered farmers pa.</td></tr>';return}
+  const counts={};dets.forEach(d=>counts[d.user_id]=(counts[d.user_id]||0)+1);
+  tbody.innerHTML=farmers.map(f=>`<tr>
+    <td style="font-weight:600">${f.name||'—'}</td>
+    <td style="color:#5a7a5a">${f.email||'—'}</td>
+    <td>${f.barangay||'—'}</td>
+    <td style="font-weight:700;color:#1e5c1e">${counts[f.id]||0}</td>
+    <td style="color:#9aaa9a;font-size:12px">${fmtDate(f.created_at)}</td>
+  </tr>`).join('');
+}
+
+function setupRealtime(){
+  sb.channel('admin-live')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'detections'},()=>loadData())
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'alerts'},()=>loadData())
+    .subscribe();
+}
+
+function exportCSV(){
+  const h=['Date','Farmer','Barangay','Crop','Disease','Confidence','Severity','Location'];
+  const r=dets.map(d=>[fmtDate(d.created_at),d.users?.name||'',d.users?.barangay||'',d.crop,d.disease,d.confidence,d.severity||'',d.location_name||'']);
+  const csv=[h,...r].map(x=>x.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='agrisense_data.csv';
+  document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},100);
+}
+
+function fmtDate(s){
+  if(!s)return'—';
+  const d=new Date(s);
+  return d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'});
+}
+
+async function doLogout(){await sb.auth.signOut();window.location.href='auth.html';}
+</script>
+</body>
+</html>
